@@ -18,20 +18,33 @@ help:
 
 DEVICES ?= 50
 
+
+up:
+	docker compose up --build -d
+
+down:
+	docker compose down -v
+
+
 example:
 	$(PYTHON) example_solution/service.py
 
-smoke:
+smoke: up
 	$(PYTHON) eval/check.py smoke --target $(SERVICE_URL) --devices $(DEVICES)
+	$(MAKE) down
 
-baseline:
+baseline: up
 	$(PYTHON) eval/check.py baseline --target $(SERVICE_URL) --devices $(DEVICES)
+	$(MAKE) down
 
-burst:
+burst: up
 	$(PYTHON) eval/check.py burst --target $(SERVICE_URL) --devices $(DEVICES)
+	$(MAKE) down
 
-offline:
+offline: up
 	$(PYTHON) eval/check.py offline --target $(SERVICE_URL) --devices $(DEVICES)
+	$(MAKE) down
 
-adversarial:
+adversarial: up
 	$(PYTHON) eval/check.py adversarial --target $(SERVICE_URL) --devices $(DEVICES)
+	$(MAKE) down

@@ -1,0 +1,5 @@
+allowBuilds:
+  esbuild: false
+configDependencies:
+  '@pnpm/plugin-types-fixer': 0.1.0
+  typescript: 6.0.3
