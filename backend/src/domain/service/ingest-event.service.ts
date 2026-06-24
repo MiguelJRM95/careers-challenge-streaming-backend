@@ -1,13 +1,24 @@
-import type { ReceiveEventPort } from "../../ports/in/receive-event.port.js";
-import type { RawEvent } from "../models/event.js";
+import type { ReceiveEventPort } from "../../ports/in/receive-event.port.ts";
+import type { RawEvent } from "../models/event.ts";
+import { EventValidator } from "./event-validator.service.ts";
 
 /**
- * Placeholder core: just accepts whatever arrives over the transport.
- * Envelope validation, ts bounds, buffering, etc. are separate checklist
- * items and will replace this body without touching the port contract.
+ * Validates incoming events against the checklist (envelope/type/payload via
+ * zod, then ts clock-skew bounds). Every POST is accepted at the transport
+ * boundary; an invalid event is logged with its full payload and discarded
+ * here rather than rejected, so admission never depends on event quality.
  */
 export class IngestEventService implements ReceiveEventPort {
-  receive(event: RawEvent): void {
-    console.log("event received:", event);
+  constructor(private readonly validator: EventValidator = new EventValidator()) {}
+
+  receive(raw: RawEvent): void {
+    const result = this.validator.validate(raw);
+
+    if (!result.ok) {
+      console.error("event discarded:", { reason: result.reason, detail: result.detail, event: raw });
+      return;
+    }
+
+    console.log("event accepted:", result.event);
   }
 }

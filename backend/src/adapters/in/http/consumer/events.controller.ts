@@ -3,7 +3,8 @@ import type { ReceiveEventPort } from "../../../../ports/in/receive-event.port.t
 
 /**
  * HTTP adapter: translates POST /events into a call on the inbound port.
- * Always accepts (202) at this stage; rejection rules land with validation.
+ * Always accepts (202): under load we never reject a POST, invalid events
+ * are logged and discarded inside the domain instead.
  */
 export function createEventsController(receiveEventPort: ReceiveEventPort): Router {
   const router = Router();

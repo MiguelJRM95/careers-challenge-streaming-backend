@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    command: sh -c "pnpm build && pnpm start"
     ports:
       - "3000:3000"
     environment:

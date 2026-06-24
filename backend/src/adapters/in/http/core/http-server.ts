@@ -3,7 +3,7 @@ import { createEventsController } from "./../consumer/events.controller.ts";
 import type { ReceiveEventPort } from "../../../../ports/in/receive-event.port.ts";
 
 export class HttpServer {
-  private app: Express = express();
+  readonly app: Express = express();
 
   constructor(private readonly port: number, receiveEventPort: ReceiveEventPort) {
     this.app.use(express.json());

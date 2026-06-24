@@ -1,9 +1,9 @@
-import type { RawEvent } from "../../domain/models/event.js";
+import type { RawEvent } from "../../domain/models/event.ts";
 
 /**
  * Inbound port: how the domain accepts an event regardless of transport.
- * The HTTP adapter is the first implementation of a caller; future
- * transports (gRPC, MQTT, WebSocket) would call the same port.
+ * Ingestion never rejects at the transport boundary; invalid events are
+ * logged and discarded internally (see IngestEventService).
  */
 export interface ReceiveEventPort {
   receive(event: RawEvent): void;
