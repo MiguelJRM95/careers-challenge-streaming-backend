@@ -1,24 +1,8 @@
-import express from "express";
+import { env } from "./config/env.js";
+import { IngestEventService } from "./domain/service/ingest-event.service.js";
+import { HttpServer } from "./adapters/in/http/core/http-server.js";
 
-class ApiServer {
-  private app = express();
+const ingestEventService = new IngestEventService();
+const server = new HttpServer(env.port, ingestEventService);
 
-  constructor() {
-    this.healthCheck();
-  }
-  
-  healthCheck() {
-    this.app.get("/health", (_req, res) => {
-      res.status(200).send("OK");
-    });
-  }
-
-  public start() {
-    this.app.listen(3000, () => {
-      console.log("Server is running on port 3000");
-    });
-  }
-}
-
-const server = new ApiServer();
 server.start();
