@@ -1,5 +1,6 @@
 import type { ValidatedEvent } from "../../models/event.ts";
 import type { PriorityQueue } from "../../models/priority-queue.ts";
+import type { AlarmService } from "../alarms/alarm.service.ts";
 
 /**
  * Drains the priority queue on its own continuation chain, yielding to the
@@ -11,7 +12,10 @@ import type { PriorityQueue } from "../../models/priority-queue.ts";
 export class EventWorker {
   private running = false;
 
-  constructor(private readonly queue: PriorityQueue<ValidatedEvent>) {}
+  constructor(
+    private readonly queue: PriorityQueue<ValidatedEvent>,
+    private readonly alarmService: AlarmService,
+  ) {}
 
   start(): void {
     this.running = true;
@@ -37,9 +41,12 @@ export class EventWorker {
     setImmediate(() => this.loop());
   }
 
-  // TODO: route by event.type to the RF-1/2/3 use cases (DeviceHealthManager,
-  // RoomOccupancyManager, AlarmManager) once they land, persisting to PG.
+  // TODO: route heartbeat/presence to the RF-1/RF-2 use cases
+  // (DeviceHealthManager, RoomOccupancyManager) once they land.
   private async process(event: ValidatedEvent): Promise<void> {
-    console.log("event processed:", event);
+    if (event.type === "fall_warn") {
+      await this.alarmService.onFallWarn(event);
+      return;
+    }
   }
 }

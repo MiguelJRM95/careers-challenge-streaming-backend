@@ -5,7 +5,14 @@ import { EventIngestorService } from "../../../../../src/domain/service/events/e
 import { EventDispatcher } from "../../../../../src/domain/service/events/event-dispatcher.service.ts";
 import { EventWorker } from "../../../../../src/domain/service/events/event-worker.service.ts";
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
+import { AlarmService } from "../../../../../src/domain/service/alarms/alarm.service.ts";
+import type { AlarmRepositoryPort } from "../../../../../src/ports/out/alarm-repository.port.ts";
 import type { ValidatedEvent } from "../../../../../src/domain/models/event.ts";
+
+const fakeAlarmRepository: AlarmRepositoryPort = {
+  insert: async () => true,
+  findSince: async () => [],
+};
 
 const NOW = new Date("2026-06-24T18:00:00.000Z");
 
@@ -32,9 +39,10 @@ describe("POST /events", () => {
     const queue = new PriorityQueue<ValidatedEvent>();
     // flushThreshold: 1 so every admitted raw event is validated and enqueued immediately in tests.
     dispatcher = new EventDispatcher(queue, undefined, { flushThreshold: 1 });
-    worker = new EventWorker(queue);
+    const alarmService = new AlarmService(fakeAlarmRepository);
+    worker = new EventWorker(queue, alarmService);
     worker.start();
-    server = new HttpServer(0, new EventIngestorService(dispatcher));
+    server = new HttpServer(0, new EventIngestorService(dispatcher), alarmService);
     logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -55,7 +63,6 @@ describe("POST /events", () => {
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ status: "accepted" });
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "heartbeat" }));
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
@@ -66,7 +73,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "presence" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed motion event and accepts it", async () => {
@@ -76,7 +83,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "motion" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed sleep_state event and accepts it", async () => {
@@ -86,7 +93,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "sleep_state" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed fall_warn event and accepts it", async () => {
@@ -96,7 +103,9 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "fall_warn" }));
+    // fall_warn is routed to the AlarmService, not the generic console.log path.
+    expect(logSpy).not.toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "fall_warn" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed net_status event and accepts it", async () => {
@@ -106,7 +115,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "net_status" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 but discards an event with ts more than 1 hour in the future", async () => {
