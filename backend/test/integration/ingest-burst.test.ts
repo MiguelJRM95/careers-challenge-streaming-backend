@@ -8,8 +8,10 @@ import { EventWorker } from "../../src/domain/service/events/event-worker.servic
 import { PriorityQueue } from "../../src/domain/models/priority-queue.ts";
 import { AlarmService } from "../../src/domain/service/alarms/alarm.service.ts";
 import { DeviceHealthService } from "../../src/domain/service/health/device-health.service.ts";
+import { RoomOccupancyService } from "../../src/domain/service/occupancy/room-occupancy.service.ts";
 import type { AlarmRepositoryPort } from "../../src/ports/out/alarm-repository.port.ts";
 import type { HeartbeatRepositoryPort } from "../../src/ports/out/heartbeat-repository.port.ts";
+import type { RoomOccupancyRepositoryPort } from "../../src/ports/out/room-occupancy-repository.port.ts";
 import type { ValidatedEvent } from "../../src/domain/models/event.ts";
 
 const fakeAlarmRepository: AlarmRepositoryPort = {
@@ -20,6 +22,12 @@ const fakeAlarmRepository: AlarmRepositoryPort = {
 const fakeHeartbeatRepository: HeartbeatRepositoryPort = {
   insert: async () => {},
   findHealth: async () => ({ latest: null, countSince: 0 }),
+};
+
+const fakeRoomOccupancyRepository: RoomOccupancyRepositoryPort = {
+  insert: async () => {},
+  findCurrentState: async () => null,
+  findOccupiedSeconds: async () => 0,
 };
 
 const heartbeat = (i: number) => ({
@@ -42,9 +50,16 @@ describe("ingest under burst", () => {
     dispatcher = new EventDispatcher(queue);
     const alarmService = new AlarmService(fakeAlarmRepository);
     const deviceHealthService = new DeviceHealthService(fakeHeartbeatRepository);
-    worker = new EventWorker(queue, alarmService, deviceHealthService);
+    const roomOccupancyService = new RoomOccupancyService(fakeRoomOccupancyRepository);
+    worker = new EventWorker(queue, alarmService, deviceHealthService, roomOccupancyService);
     worker.start();
-    const httpServer = new HttpServer(0, new EventIngestorService(dispatcher), alarmService, deviceHealthService);
+    const httpServer = new HttpServer(
+      0,
+      new EventIngestorService(dispatcher),
+      alarmService,
+      deviceHealthService,
+      roomOccupancyService,
+    );
     server = httpServer.start();
     // Capped, reused connections: a real client pools connections rather
     // than opening 1000 simultaneous raw sockets, which would just trip the

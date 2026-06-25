@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import express from "express";
 import request from "supertest";
 import { createDeviceHealthController } from "../../../../../src/adapters/in/http/devices/device-health.controller.ts";
+import { resourceNotFoundTotal } from "../../../../../src/config/metrics.ts";
 import type { DeviceHealthPort } from "../../../../../src/ports/in/device-health.port.ts";
 import type { DeviceHealth } from "../../../../../src/domain/models/device-health.ts";
 
@@ -28,13 +29,16 @@ describe("GET /devices/:device_id/health", () => {
     expect(res.body).toEqual(health);
   });
 
-  it("given a device that has never sent a heartbeat, when its health is requested, then it responds 404", async () => {
+  it("given a device that has never sent a heartbeat, when its health is requested, then it responds 404 and counts the miss", async () => {
     const getHealth = vi.fn().mockResolvedValue(null);
     const app = buildApp({ getHealth });
+    const before = (await resourceNotFoundTotal.get()).values.find((v) => v.labels.resource === "device")?.value ?? 0;
 
     const res = await request(app).get("/devices/dev_unknown/health");
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "device_not_found" });
+    const after = (await resourceNotFoundTotal.get()).values.find((v) => v.labels.resource === "device")?.value ?? 0;
+    expect(after).toBe(before + 1);
   });
 });

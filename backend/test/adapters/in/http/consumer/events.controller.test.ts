@@ -7,9 +7,11 @@ import { EventWorker } from "../../../../../src/domain/service/events/event-work
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
 import { AlarmService } from "../../../../../src/domain/service/alarms/alarm.service.ts";
 import { DeviceHealthService } from "../../../../../src/domain/service/health/device-health.service.ts";
+import { RoomOccupancyService } from "../../../../../src/domain/service/occupancy/room-occupancy.service.ts";
 import { logger } from "../../../../../src/config/logger.ts";
 import type { AlarmRepositoryPort } from "../../../../../src/ports/out/alarm-repository.port.ts";
 import type { HeartbeatRepositoryPort } from "../../../../../src/ports/out/heartbeat-repository.port.ts";
+import type { RoomOccupancyRepositoryPort } from "../../../../../src/ports/out/room-occupancy-repository.port.ts";
 import type { ValidatedEvent } from "../../../../../src/domain/models/event.ts";
 
 const fakeAlarmRepository: AlarmRepositoryPort = {
@@ -20,6 +22,12 @@ const fakeAlarmRepository: AlarmRepositoryPort = {
 const fakeHeartbeatRepository: HeartbeatRepositoryPort = {
   insert: async () => {},
   findHealth: async () => ({ latest: null, countSince: 0 }),
+};
+
+const fakeRoomOccupancyRepository: RoomOccupancyRepositoryPort = {
+  insert: async () => {},
+  findCurrentState: async () => null,
+  findOccupiedSeconds: async () => 0,
 };
 
 const NOW = new Date("2026-06-24T18:00:00.000Z");
@@ -49,9 +57,16 @@ describe("POST /events", () => {
     dispatcher = new EventDispatcher(queue, undefined, { flushThreshold: 1 });
     const alarmService = new AlarmService(fakeAlarmRepository);
     const deviceHealthService = new DeviceHealthService(fakeHeartbeatRepository);
-    worker = new EventWorker(queue, alarmService, deviceHealthService);
+    const roomOccupancyService = new RoomOccupancyService(fakeRoomOccupancyRepository);
+    worker = new EventWorker(queue, alarmService, deviceHealthService, roomOccupancyService);
     worker.start();
-    server = new HttpServer(0, new EventIngestorService(dispatcher), alarmService, deviceHealthService);
+    server = new HttpServer(
+      0,
+      new EventIngestorService(dispatcher),
+      alarmService,
+      deviceHealthService,
+      roomOccupancyService,
+    );
     warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => logger);
     errorSpy = vi.spyOn(logger, "error").mockImplementation(() => logger);
   });

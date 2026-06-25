@@ -3,9 +3,11 @@ import type { Server } from "node:http";
 import { createEventsController } from "./../consumer/events.controller.ts";
 import { createAlarmsController } from "./../alarms/alarms.controller.ts";
 import { createDeviceHealthController } from "./../devices/device-health.controller.ts";
+import { createRoomOccupancyController } from "./../rooms/room-occupancy.controller.ts";
 import type { ReceiveEventPort } from "../../../../ports/in/receive-event.port.ts";
 import type { AlarmsPort } from "../../../../ports/in/alarm-feed.port.ts";
 import type { DeviceHealthPort } from "../../../../ports/in/device-health.port.ts";
+import type { RoomOccupancyPort } from "../../../../ports/in/room-occupancy.port.ts";
 import { logger } from "../../../../config/logger.ts";
 import { registry } from "../../../../config/metrics.ts";
 
@@ -17,6 +19,7 @@ export class HttpServer {
     receiveEventPort: ReceiveEventPort,
     alarmsPort: AlarmsPort,
     deviceHealthPort: DeviceHealthPort,
+    roomOccupancyPort: RoomOccupancyPort,
   ) {
     this.app.use(express.json());
     this.app.get("/health", (_req, res) => {
@@ -29,6 +32,7 @@ export class HttpServer {
     this.app.use(createEventsController(receiveEventPort));
     this.app.use(createAlarmsController(alarmsPort));
     this.app.use(createDeviceHealthController(deviceHealthPort));
+    this.app.use(createRoomOccupancyController(roomOccupancyPort));
   }
 
   start(): Server {

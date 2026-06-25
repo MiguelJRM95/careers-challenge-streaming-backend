@@ -47,3 +47,10 @@ export const fallWarnDuplicatesTotal = new Counter({
   help: "Total number of fall_warn events recognized as duplicates of an existing alarm within the dedup window",
   registers: [registry],
 });
+
+export const resourceNotFoundTotal = new Counter({
+  name: "resource_not_found_total",
+  help: "Total number of read requests for a device or room with no recorded state yet (404s)",
+  labelNames: ["resource"],
+  registers: [registry],
+});
