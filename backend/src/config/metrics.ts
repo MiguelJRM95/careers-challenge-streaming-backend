@@ -1,4 +1,4 @@
-import { Counter, Gauge, Registry, collectDefaultMetrics } from "prom-client";
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from "prom-client";
 
 export const registry = new Registry();
 collectDefaultMetrics({ register: registry });
@@ -52,5 +52,17 @@ export const resourceNotFoundTotal = new Counter({
   name: "resource_not_found_total",
   help: "Total number of read requests for a device or room with no recorded state yet (404s)",
   labelNames: ["resource"],
+  registers: [registry],
+});
+
+// README target: alarm feed emits within 1s of ingest at p95. With the
+// event_generator standing in for a Kafka producer, "ingest" and "feed"
+// are just two HTTP endpoints, so plain request-duration buckets per
+// route give us p50/p95/p99 for both POST /events and GET /alarms.
+export const httpRequestDurationSeconds = new Histogram({
+  name: "http_request_duration_seconds",
+  help: "HTTP request duration in seconds, by route/method/status",
+  labelNames: ["method", "route", "status"],
+  buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 5],
   registers: [registry],
 });

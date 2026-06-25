@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import type { AlarmsPort } from "../../../../ports/in/alarm-feed.port.ts";
+import { requestDurationMiddleware } from "../core/request-duration.middleware.ts";
 
 // "0" is the scorer's sentinel for "everything since the beginning"; any
 // other value must be an ISO timestamp. Validated here so a malformed
@@ -18,7 +19,7 @@ const sinceSchema = z.literal("0").or(z.iso.datetime({ offset: true })).default(
 export function createAlarmsController(alarmsPort: AlarmsPort): Router {
   const router = Router();
 
-  router.get("/alarms", async (req, res) => {
+  router.get("/alarms", requestDurationMiddleware, async (req, res) => {
     const parsed = sinceSchema.safeParse(req.query.since);
     if (!parsed.success) {
       res.status(400).json({ error: "invalid_since", detail: "since must be '0' or an ISO timestamp" });
