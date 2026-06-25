@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { Agent, type Server } from "node:http";
 import { HttpServer } from "../../src/adapters/in/http/core/http-server.ts";
-import { IngestEventService } from "../../src/domain/service/ingest-event.service.ts";
+import { EventIngestorService } from "../../src/domain/service/event-ingestor.service.ts";
 import { EventDispatcher } from "../../src/domain/service/event-dispatcher.service.ts";
 import { EventWorker } from "../../src/domain/service/event-worker.service.ts";
 import { PriorityQueue } from "../../src/domain/models/priority-queue.ts";
@@ -28,7 +28,7 @@ describe("ingest under burst", () => {
     dispatcher = new EventDispatcher(queue);
     worker = new EventWorker(queue);
     worker.start();
-    const httpServer = new HttpServer(0, new IngestEventService(dispatcher));
+    const httpServer = new HttpServer(0, new EventIngestorService(dispatcher));
     server = httpServer.start();
     // Capped, reused connections: a real client pools connections rather
     // than opening 1000 simultaneous raw sockets, which would just trip the

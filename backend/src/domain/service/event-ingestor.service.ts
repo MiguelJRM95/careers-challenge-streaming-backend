@@ -8,7 +8,7 @@ import type { EventDispatcher } from "./event-dispatcher.service.ts";
  * flush, off the request's call stack, so a burst of POSTs never pays for
  * zod parsing synchronously here.
  */
-export class IngestEventService implements ReceiveEventPort {
+export class EventIngestorService implements ReceiveEventPort {
   constructor(private readonly dispatcher: EventDispatcher) {}
 
   receive(raw: RawEvent): void {

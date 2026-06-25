@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { HttpServer } from "../../../../../src/adapters/in/http/core/http-server.ts";
-import { IngestEventService } from "../../../../../src/domain/service/ingest-event.service.ts";
+import { EventIngestorService } from "../../../../../src/domain/service/event-ingestor.service.ts";
 import { EventDispatcher } from "../../../../../src/domain/service/event-dispatcher.service.ts";
 import { EventWorker } from "../../../../../src/domain/service/event-worker.service.ts";
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
@@ -34,7 +34,7 @@ describe("POST /events", () => {
     dispatcher = new EventDispatcher(queue, undefined, { flushThreshold: 1 });
     worker = new EventWorker(queue);
     worker.start();
-    server = new HttpServer(0, new IngestEventService(dispatcher));
+    server = new HttpServer(0, new EventIngestorService(dispatcher));
     logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });

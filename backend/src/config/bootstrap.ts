@@ -3,7 +3,7 @@ import type { ValidatedEvent } from "../domain/models/event.js";
 import { PriorityQueue } from "../domain/models/priority-queue.js";
 import { EventDispatcher } from "../domain/service/event-dispatcher.service.js";
 import { EventWorker } from "../domain/service/event-worker.service.js";
-import { IngestEventService } from "../domain/service/ingest-event.service.js";
+import { EventIngestorService } from "../domain/service/event-ingestor.service.ts";
 import { HttpServer } from "../adapters/in/http/core/http-server.js";
 
 export interface App {
@@ -30,8 +30,8 @@ export function buildApp(): App {
   const worker = new EventWorker(queue);
   worker.start();
 
-  const ingestEventService = new IngestEventService(dispatcher);
-  const httpServer = new HttpServer(env.port, ingestEventService);
+  const eventIngestorService = new EventIngestorService(dispatcher);
+  const httpServer = new HttpServer(env.port, eventIngestorService);
 
   return { httpServer, worker, dispatcher };
 }

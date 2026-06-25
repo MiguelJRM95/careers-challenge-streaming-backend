@@ -1,3 +1,4 @@
+import { bufferFillRatio } from "../../config/metrics.js";
 import type { EventType, RawEvent, ValidatedEvent } from "../models/event.js";
 import { PriorityQueue } from "../models/priority-queue.js";
 import { EventValidator } from "./event-validator.service.js";
@@ -50,6 +51,7 @@ export class EventDispatcher {
 
   dispatch(raw: RawEvent): void {
     this.buffer.push(raw);
+    this.reportBufferLevel();
 
     if (isFallWarnRaw(raw) || this.buffer.length >= this.flushThreshold) {
       setImmediate(() => this.flush());
@@ -64,12 +66,17 @@ export class EventDispatcher {
     clearInterval(this.timer);
   }
 
+  private reportBufferLevel(): void {
+    bufferFillRatio.set(this.buffer.length / this.flushThreshold);
+  }
+
   private flush(): void {
     if (this.buffer.length === 0) return;
 
     // Atomic w.r.t. dispatch(): splice empties the buffer in one step so
     // concurrent pushes from in-flight requests land in the next batch.
     const batch = this.buffer.splice(0);
+    this.reportBufferLevel();
     const fallWarns: ValidatedEvent[] = [];
     const rest: ValidatedEvent[] = [];
 
