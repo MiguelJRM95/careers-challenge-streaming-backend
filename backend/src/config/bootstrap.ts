@@ -1,9 +1,12 @@
 import { env } from "./env.js";
+import { db } from "./database.js";
 import type { ValidatedEvent } from "../domain/models/event.js";
 import { PriorityQueue } from "../domain/models/priority-queue.js";
 import { EventDispatcher } from "../domain/service/events/event-dispatcher.service.ts";
 import { EventWorker } from "../domain/service/events/event-worker.service.ts";
 import { EventIngestorService } from "../domain/service/events/event-ingestor.service.ts";
+import { AlarmService } from "../domain/service/alarms/alarm.service.ts";
+import { PostgresAlarmRepository } from "../adapters/out/db/alarm.repository.ts";
 import { HttpServer } from "../adapters/in/http/core/http-server.js";
 
 export interface App {
@@ -27,11 +30,14 @@ export function buildApp(): App {
     flushIntervalMs: env.bufferFlushIntervalMs,
   });
 
-  const worker = new EventWorker(queue);
+  const alarmRepository = new PostgresAlarmRepository(db);
+  const alarmService = new AlarmService(alarmRepository);
+
+  const worker = new EventWorker(queue, alarmService);
   worker.start();
 
   const eventIngestorService = new EventIngestorService(dispatcher);
-  const httpServer = new HttpServer(env.port, eventIngestorService);
+  const httpServer = new HttpServer(env.port, eventIngestorService, alarmService);
 
   return { httpServer, worker, dispatcher };
 }

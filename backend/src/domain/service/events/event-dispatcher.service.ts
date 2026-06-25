@@ -1,4 +1,5 @@
-import { bufferFillRatio } from "../../../config/metrics.ts";
+import { logger } from "../../../config/logger.ts";
+import { bufferFillRatio, eventsIngestedTotal, eventsRejectedTotal } from "../../../config/metrics.ts";
 import type { EventType, RawEvent, ValidatedEvent } from "../../models/event.ts";
 import { PriorityQueue } from "../../models/priority-queue.ts";
 import { EventValidator } from "./event-validator.service.js";
@@ -83,9 +84,16 @@ export class EventDispatcher {
     for (const raw of batch) {
       const result = this.validator.validate(raw);
       if (!result.ok) {
-        console.error("event discarded:", { reason: result.reason, detail: result.detail, event: raw });
+        // warn, not error: a rejected event is expected operational noise
+        // (malformed payload, broken clock) under adversarial input, not a
+        // fault in our own system - logged in full per CONTEXT.md's "no
+        // silent drop" requirement, with the reason counted so rejection
+        // rates are visible on /metrics without grepping logs.
+        logger.warn("event discarded", { reason: result.reason, detail: result.detail, event: raw });
+        eventsRejectedTotal.inc({ reason: result.reason });
         continue;
       }
+      eventsIngestedTotal.inc({ type: result.event.type });
       (result.event.type === "fall_warn" ? fallWarns : rest).push(result.event);
     }
 

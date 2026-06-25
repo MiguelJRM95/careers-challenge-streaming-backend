@@ -5,7 +5,15 @@ import { EventIngestorService } from "../../../../../src/domain/service/events/e
 import { EventDispatcher } from "../../../../../src/domain/service/events/event-dispatcher.service.ts";
 import { EventWorker } from "../../../../../src/domain/service/events/event-worker.service.ts";
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
+import { AlarmService } from "../../../../../src/domain/service/alarms/alarm.service.ts";
+import { logger } from "../../../../../src/config/logger.ts";
+import type { AlarmRepositoryPort } from "../../../../../src/ports/out/alarm-repository.port.ts";
 import type { ValidatedEvent } from "../../../../../src/domain/models/event.ts";
+
+const fakeAlarmRepository: AlarmRepositoryPort = {
+  insert: async () => true,
+  findSince: async () => [],
+};
 
 const NOW = new Date("2026-06-24T18:00:00.000Z");
 
@@ -23,7 +31,7 @@ describe("POST /events", () => {
   let server: HttpServer;
   let dispatcher: EventDispatcher;
   let worker: EventWorker;
-  let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -32,18 +40,19 @@ describe("POST /events", () => {
     const queue = new PriorityQueue<ValidatedEvent>();
     // flushThreshold: 1 so every admitted raw event is validated and enqueued immediately in tests.
     dispatcher = new EventDispatcher(queue, undefined, { flushThreshold: 1 });
-    worker = new EventWorker(queue);
+    const alarmService = new AlarmService(fakeAlarmRepository);
+    worker = new EventWorker(queue, alarmService);
     worker.start();
-    server = new HttpServer(0, new EventIngestorService(dispatcher));
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    server = new HttpServer(0, new EventIngestorService(dispatcher), alarmService);
+    warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => logger);
+    errorSpy = vi.spyOn(logger, "error").mockImplementation(() => logger);
   });
 
   afterEach(() => {
     worker.stop();
     dispatcher.stop();
     vi.useRealTimers();
-    logSpy.mockRestore();
+    warnSpy.mockRestore();
     errorSpy.mockRestore();
   });
 
@@ -55,7 +64,7 @@ describe("POST /events", () => {
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ status: "accepted" });
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "heartbeat" }));
+    expect(warnSpy).not.toHaveBeenCalled();
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
@@ -66,7 +75,8 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "presence" }));
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed motion event and accepts it", async () => {
@@ -76,7 +86,8 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "motion" }));
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed sleep_state event and accepts it", async () => {
@@ -86,7 +97,8 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "sleep_state" }));
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed fall_warn event and accepts it", async () => {
@@ -96,7 +108,8 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "fall_warn" }));
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 for a well-formed net_status event and accepts it", async () => {
@@ -106,7 +119,8 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(logSpy).toHaveBeenCalledWith("event processed:", expect.objectContaining({ type: "net_status" }));
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 but discards an event with ts more than 1 hour in the future", async () => {
@@ -118,11 +132,8 @@ describe("POST /events", () => {
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ status: "accepted" });
     await flushWorker();
-    expect(errorSpy).toHaveBeenCalledWith(
-      "event discarded:",
-      expect.objectContaining({ reason: "ts_in_future" }),
-    );
-    expect(logSpy).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith("event discarded", expect.objectContaining({ reason: "ts_in_future" }));
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 
   it("returns 202 but discards an event with ts more than 1 hour in the past", async () => {
@@ -133,7 +144,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(errorSpy).toHaveBeenCalledWith("event discarded:", expect.objectContaining({ reason: "ts_too_old" }));
+    expect(warnSpy).toHaveBeenCalledWith("event discarded", expect.objectContaining({ reason: "ts_too_old" }));
   });
 
   it("returns 202 but discards an event missing required envelope fields", async () => {
@@ -143,7 +154,7 @@ describe("POST /events", () => {
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ status: "accepted" });
     await flushWorker();
-    expect(errorSpy).toHaveBeenCalledWith("event discarded:", expect.objectContaining({ reason: "invalid_schema" }));
+    expect(warnSpy).toHaveBeenCalledWith("event discarded", expect.objectContaining({ reason: "invalid_schema" }));
   });
 
   it("returns 202 but discards an event with an unknown type", async () => {
@@ -153,7 +164,7 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(errorSpy).toHaveBeenCalledWith("event discarded:", expect.objectContaining({ reason: "invalid_schema" }));
+    expect(warnSpy).toHaveBeenCalledWith("event discarded", expect.objectContaining({ reason: "invalid_schema" }));
   });
 
   it("returns 202 but discards an event with a malformed payload for its type", async () => {
@@ -163,6 +174,6 @@ describe("POST /events", () => {
 
     expect(res.status).toBe(202);
     await flushWorker();
-    expect(errorSpy).toHaveBeenCalledWith("event discarded:", expect.objectContaining({ reason: "invalid_schema" }));
+    expect(warnSpy).toHaveBeenCalledWith("event discarded", expect.objectContaining({ reason: "invalid_schema" }));
   });
 });

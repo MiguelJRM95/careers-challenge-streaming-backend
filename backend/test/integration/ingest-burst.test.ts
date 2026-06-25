@@ -6,7 +6,14 @@ import { EventIngestorService } from "../../src/domain/service/events/event-inge
 import { EventDispatcher } from "../../src/domain/service/events/event-dispatcher.service.ts";
 import { EventWorker } from "../../src/domain/service/events/event-worker.service.ts";
 import { PriorityQueue } from "../../src/domain/models/priority-queue.ts";
+import { AlarmService } from "../../src/domain/service/alarms/alarm.service.ts";
+import type { AlarmRepositoryPort } from "../../src/ports/out/alarm-repository.port.ts";
 import type { ValidatedEvent } from "../../src/domain/models/event.ts";
+
+const fakeAlarmRepository: AlarmRepositoryPort = {
+  insert: async () => true,
+  findSince: async () => [],
+};
 
 const heartbeat = (i: number) => ({
   device_id: `dev_${i}`,
@@ -26,9 +33,10 @@ describe("ingest under burst", () => {
   beforeEach(() => {
     const queue = new PriorityQueue<ValidatedEvent>();
     dispatcher = new EventDispatcher(queue);
-    worker = new EventWorker(queue);
+    const alarmService = new AlarmService(fakeAlarmRepository);
+    worker = new EventWorker(queue, alarmService);
     worker.start();
-    const httpServer = new HttpServer(0, new EventIngestorService(dispatcher));
+    const httpServer = new HttpServer(0, new EventIngestorService(dispatcher), alarmService);
     server = httpServer.start();
     // Capped, reused connections: a real client pools connections rather
     // than opening 1000 simultaneous raw sockets, which would just trip the

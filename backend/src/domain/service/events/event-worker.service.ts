@@ -1,5 +1,8 @@
+import { logger } from "../../../config/logger.ts";
+import { eventsProcessingErrorsTotal, queueDepth } from "../../../config/metrics.ts";
 import type { ValidatedEvent } from "../../models/event.ts";
 import type { PriorityQueue } from "../../models/priority-queue.ts";
+import type { AlarmService } from "../alarms/alarm.service.ts";
 
 /**
  * Drains the priority queue on its own continuation chain, yielding to the
@@ -11,7 +14,10 @@ import type { PriorityQueue } from "../../models/priority-queue.ts";
 export class EventWorker {
   private running = false;
 
-  constructor(private readonly queue: PriorityQueue<ValidatedEvent>) {}
+  constructor(
+    private readonly queue: PriorityQueue<ValidatedEvent>,
+    private readonly alarmService: AlarmService,
+  ) {}
 
   start(): void {
     this.running = true;
@@ -26,20 +32,34 @@ export class EventWorker {
     if (!this.running) return;
 
     const event = this.queue.dequeue();
+    // Reported every tick (not just on dequeue) so the gauge reads 0 once
+    // the backlog drains, instead of holding the last nonzero value -
+    // CONTEXT.md's "tamaño de cola" observability requirement, and the
+    // earliest signal that a burst is outpacing processing.
+    queueDepth.set(this.queue.size);
+
     if (event) {
       // Not awaited: process() will become I/O-bound (PG writes) once
-      // RF-1/2/3 land, and a slow write must not stall the dequeue of the
+      // RF-1/2 land, and a slow write must not stall the dequeue of the
       // next event. Errors are caught here so a rejected write can't crash
-      // the loop either.
-      this.process(event).catch((err: unknown) => console.error("worker processing error:", { err, event }));
+      // the loop either - this is the one place a validated event can still
+      // be lost (e.g. a DB write failure), so it's logged at error severity
+      // with the full event and counted, per CONTEXT.md's "no silent drop".
+      this.process(event).catch((err: unknown) => {
+        logger.error("worker processing error", { err, event });
+        eventsProcessingErrorsTotal.inc({ type: event.type });
+      });
     }
 
     setImmediate(() => this.loop());
   }
 
-  // TODO: route by event.type to the RF-1/2/3 use cases (DeviceHealthManager,
-  // RoomOccupancyManager, AlarmManager) once they land, persisting to PG.
+  // TODO: route heartbeat/presence to the RF-1/RF-2 use cases
+  // (DeviceHealthManager, RoomOccupancyManager) once they land.
   private async process(event: ValidatedEvent): Promise<void> {
-    console.log("event processed:", event);
+    if (event.type === "fall_warn") {
+      await this.alarmService.onFallWarn(event);
+      return;
+    }
   }
 }

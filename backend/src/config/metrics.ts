@@ -34,3 +34,16 @@ export const bufferFillRatio = new Gauge({
   help: "Event buffer depth divided by the flush threshold (0-1)",
   registers: [registry],
 });
+
+export const eventsProcessingErrorsTotal = new Counter({
+  name: "events_processing_errors_total",
+  help: "Total number of events that failed during worker processing (e.g. a failed DB write)",
+  labelNames: ["type"],
+  registers: [registry],
+});
+
+export const fallWarnDuplicatesTotal = new Counter({
+  name: "fall_warn_duplicates_total",
+  help: "Total number of fall_warn events recognized as duplicates of an existing alarm within the dedup window",
+  registers: [registry],
+});
