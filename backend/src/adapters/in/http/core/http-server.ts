@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import type { Server } from "node:http";
 import { createEventsController } from "./../consumer/events.controller.ts";
 import type { ReceiveEventPort } from "../../../../ports/in/receive-event.port.ts";
 
@@ -13,8 +14,8 @@ export class HttpServer {
     this.app.use(createEventsController(receiveEventPort));
   }
 
-  start(): void {
-    this.app.listen(this.port, () => {
+  start(): Server {
+    return this.app.listen(this.port, () => {
       console.log(`Server is running on port ${this.port}`);
     });
   }
