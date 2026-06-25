@@ -7,6 +7,8 @@ import { EventWorker } from "../domain/service/events/event-worker.service.ts";
 import { EventIngestorService } from "../domain/service/events/event-ingestor.service.ts";
 import { AlarmService } from "../domain/service/alarms/alarm.service.ts";
 import { PostgresAlarmRepository } from "../adapters/out/db/alarm.repository.ts";
+import { DeviceHealthService } from "../domain/service/health/device-health.service.ts";
+import { PostgresHeartbeatRepository } from "../adapters/out/db/heartbeat.repository.ts";
 import { HttpServer } from "../adapters/in/http/core/http-server.js";
 
 export interface App {
@@ -33,11 +35,14 @@ export function buildApp(): App {
   const alarmRepository = new PostgresAlarmRepository(db);
   const alarmService = new AlarmService(alarmRepository);
 
-  const worker = new EventWorker(queue, alarmService);
+  const heartbeatRepository = new PostgresHeartbeatRepository(db);
+  const deviceHealthService = new DeviceHealthService(heartbeatRepository);
+
+  const worker = new EventWorker(queue, alarmService, deviceHealthService);
   worker.start();
 
   const eventIngestorService = new EventIngestorService(dispatcher);
-  const httpServer = new HttpServer(env.port, eventIngestorService, alarmService);
+  const httpServer = new HttpServer(env.port, eventIngestorService, alarmService, deviceHealthService);
 
   return { httpServer, worker, dispatcher };
 }

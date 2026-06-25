@@ -3,6 +3,7 @@ import { eventsProcessingErrorsTotal, queueDepth } from "../../../config/metrics
 import type { ValidatedEvent } from "../../models/event.ts";
 import type { PriorityQueue } from "../../models/priority-queue.ts";
 import type { AlarmService } from "../alarms/alarm.service.ts";
+import type { DeviceHealthService } from "../health/device-health.service.ts";
 
 /**
  * Drains the priority queue on its own continuation chain, yielding to the
@@ -17,6 +18,7 @@ export class EventWorker {
   constructor(
     private readonly queue: PriorityQueue<ValidatedEvent>,
     private readonly alarmService: AlarmService,
+    private readonly deviceHealthService: DeviceHealthService,
   ) {}
 
   start(): void {
@@ -54,11 +56,14 @@ export class EventWorker {
     setImmediate(() => this.loop());
   }
 
-  // TODO: route heartbeat/presence to the RF-1/RF-2 use cases
-  // (DeviceHealthManager, RoomOccupancyManager) once they land.
+  // TODO: route presence to the RF-2 use case (RoomOccupancyManager) once it lands.
   private async process(event: ValidatedEvent): Promise<void> {
     if (event.type === "fall_warn") {
       await this.alarmService.onFallWarn(event);
+      return;
+    }
+    if (event.type === "heartbeat") {
+      await this.deviceHealthService.onHeartbeat(event);
       return;
     }
   }

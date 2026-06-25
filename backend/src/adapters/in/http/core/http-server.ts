@@ -2,8 +2,10 @@ import express, { type Express } from "express";
 import type { Server } from "node:http";
 import { createEventsController } from "./../consumer/events.controller.ts";
 import { createAlarmsController } from "./../alarms/alarms.controller.ts";
+import { createDeviceHealthController } from "./../devices/device-health.controller.ts";
 import type { ReceiveEventPort } from "../../../../ports/in/receive-event.port.ts";
 import type { AlarmsPort } from "../../../../ports/in/alarm-feed.port.ts";
+import type { DeviceHealthPort } from "../../../../ports/in/device-health.port.ts";
 import { logger } from "../../../../config/logger.ts";
 import { registry } from "../../../../config/metrics.ts";
 
@@ -14,6 +16,7 @@ export class HttpServer {
     private readonly port: number,
     receiveEventPort: ReceiveEventPort,
     alarmsPort: AlarmsPort,
+    deviceHealthPort: DeviceHealthPort,
   ) {
     this.app.use(express.json());
     this.app.get("/health", (_req, res) => {
@@ -25,6 +28,7 @@ export class HttpServer {
     });
     this.app.use(createEventsController(receiveEventPort));
     this.app.use(createAlarmsController(alarmsPort));
+    this.app.use(createDeviceHealthController(deviceHealthPort));
   }
 
   start(): Server {

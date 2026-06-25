@@ -6,13 +6,20 @@ import { EventDispatcher } from "../../../../../src/domain/service/events/event-
 import { EventWorker } from "../../../../../src/domain/service/events/event-worker.service.ts";
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
 import { AlarmService } from "../../../../../src/domain/service/alarms/alarm.service.ts";
+import { DeviceHealthService } from "../../../../../src/domain/service/health/device-health.service.ts";
 import { logger } from "../../../../../src/config/logger.ts";
 import type { AlarmRepositoryPort } from "../../../../../src/ports/out/alarm-repository.port.ts";
+import type { HeartbeatRepositoryPort } from "../../../../../src/ports/out/heartbeat-repository.port.ts";
 import type { ValidatedEvent } from "../../../../../src/domain/models/event.ts";
 
 const fakeAlarmRepository: AlarmRepositoryPort = {
   insert: async () => true,
   findSince: async () => [],
+};
+
+const fakeHeartbeatRepository: HeartbeatRepositoryPort = {
+  insert: async () => {},
+  findHealth: async () => ({ latest: null, countSince: 0 }),
 };
 
 const NOW = new Date("2026-06-24T18:00:00.000Z");
@@ -41,9 +48,10 @@ describe("POST /events", () => {
     // flushThreshold: 1 so every admitted raw event is validated and enqueued immediately in tests.
     dispatcher = new EventDispatcher(queue, undefined, { flushThreshold: 1 });
     const alarmService = new AlarmService(fakeAlarmRepository);
-    worker = new EventWorker(queue, alarmService);
+    const deviceHealthService = new DeviceHealthService(fakeHeartbeatRepository);
+    worker = new EventWorker(queue, alarmService, deviceHealthService);
     worker.start();
-    server = new HttpServer(0, new EventIngestorService(dispatcher), alarmService);
+    server = new HttpServer(0, new EventIngestorService(dispatcher), alarmService, deviceHealthService);
     warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => logger);
     errorSpy = vi.spyOn(logger, "error").mockImplementation(() => logger);
   });
