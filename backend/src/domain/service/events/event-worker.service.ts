@@ -1,5 +1,5 @@
-import type { ValidatedEvent } from "../models/event.js";
-import type { PriorityQueue } from "../models/priority-queue.js";
+import type { ValidatedEvent } from "../../models/event.ts";
+import type { PriorityQueue } from "../../models/priority-queue.ts";
 
 /**
  * Drains the priority queue on its own continuation chain, yielding to the

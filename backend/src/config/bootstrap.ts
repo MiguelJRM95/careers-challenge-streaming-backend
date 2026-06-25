@@ -1,9 +1,9 @@
 import { env } from "./env.js";
 import type { ValidatedEvent } from "../domain/models/event.js";
 import { PriorityQueue } from "../domain/models/priority-queue.js";
-import { EventDispatcher } from "../domain/service/event-dispatcher.service.js";
-import { EventWorker } from "../domain/service/event-worker.service.js";
-import { EventIngestorService } from "../domain/service/event-ingestor.service.ts";
+import { EventDispatcher } from "../domain/service/events/event-dispatcher.service.ts";
+import { EventWorker } from "../domain/service/events/event-worker.service.ts";
+import { EventIngestorService } from "../domain/service/events/event-ingestor.service.ts";
 import { HttpServer } from "../adapters/in/http/core/http-server.js";
 
 export interface App {

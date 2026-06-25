@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { HttpServer } from "../../../../../src/adapters/in/http/core/http-server.ts";
-import { EventIngestorService } from "../../../../../src/domain/service/event-ingestor.service.ts";
-import { EventDispatcher } from "../../../../../src/domain/service/event-dispatcher.service.ts";
-import { EventWorker } from "../../../../../src/domain/service/event-worker.service.ts";
+import { EventIngestorService } from "../../../../../src/domain/service/events/event-ingestor.service.ts";
+import { EventDispatcher } from "../../../../../src/domain/service/events/event-dispatcher.service.ts";
+import { EventWorker } from "../../../../../src/domain/service/events/event-worker.service.ts";
 import { PriorityQueue } from "../../../../../src/domain/models/priority-queue.ts";
 import type { ValidatedEvent } from "../../../../../src/domain/models/event.ts";
 

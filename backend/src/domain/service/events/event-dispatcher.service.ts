@@ -1,6 +1,6 @@
-import { bufferFillRatio } from "../../config/metrics.js";
-import type { EventType, RawEvent, ValidatedEvent } from "../models/event.js";
-import { PriorityQueue } from "../models/priority-queue.js";
+import { bufferFillRatio } from "../../../config/metrics.ts";
+import type { EventType, RawEvent, ValidatedEvent } from "../../models/event.ts";
+import { PriorityQueue } from "../../models/priority-queue.ts";
 import { EventValidator } from "./event-validator.service.js";
 
 const PRIORITIES: Record<EventType, number> = {

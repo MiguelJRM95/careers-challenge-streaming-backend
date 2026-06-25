@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { EventDispatcher } from "../../../src/domain/service/event-dispatcher.service.ts";
+import { EventDispatcher } from "../../../src/domain/service/events/event-dispatcher.service.ts";
 import { PriorityQueue } from "../../../src/domain/models/priority-queue.ts";
 import type { RawEvent, ValidatedEvent } from "../../../src/domain/models/event.ts";
 

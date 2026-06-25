@@ -1,5 +1,5 @@
-import type { ReceiveEventPort } from "../../ports/in/receive-event.port.ts";
-import type { RawEvent } from "../models/event.ts";
+import type { ReceiveEventPort } from "../../../ports/in/receive-event.port.ts";
+import type { RawEvent } from "../../models/event.ts";
 import type { EventDispatcher } from "./event-dispatcher.service.ts";
 
 /**

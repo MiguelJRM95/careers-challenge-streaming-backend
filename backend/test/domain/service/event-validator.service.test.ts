@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EventValidator } from "../../../src/domain/service/event-validator.service.ts";
+import { EventValidator } from "../../../src/domain/service/events/event-validator.service.ts";
 import type { RawEvent } from "../../../src/domain/models/event.ts";
 import type { RejectionReason, ValidationResult } from "../../../src/domain/models/validation-result.ts";
 

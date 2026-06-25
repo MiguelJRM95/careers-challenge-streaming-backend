@@ -1,5 +1,5 @@
-import { eventSchema, type RawEvent } from "../models/event.js";
-import type { ValidationResult } from "../models/validation-result.js";
+import { eventSchema, type RawEvent } from "../../models/event.ts";
+import type { ValidationResult } from "../../models/validation-result.ts";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
