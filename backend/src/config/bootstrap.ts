@@ -12,6 +12,7 @@ import { PostgresHeartbeatRepository } from "../adapters/out/db/heartbeat.reposi
 import { RoomOccupancyService } from "../domain/service/occupancy/room-occupancy.service.ts";
 import { PostgresRoomOccupancyRepository } from "../adapters/out/db/room-occupancy.repository.ts";
 import { HttpServer } from "../adapters/in/http/core/http-server.js";
+import { EventValidator } from "../domain/service/events/event-validator.service.ts";
 
 export interface App {
   httpServer: HttpServer;
@@ -22,7 +23,9 @@ export interface App {
 export function buildApp(): App {
   const queue = new PriorityQueue<ValidatedEvent>();
 
-  const dispatcher = new EventDispatcher(queue, undefined, {
+  const validator: EventValidator = new EventValidator()
+
+  const dispatcher = new EventDispatcher(queue, validator, {
     flushThreshold: env.bufferFlushThreshold,
     flushIntervalMs: env.bufferFlushIntervalMs,
   });
