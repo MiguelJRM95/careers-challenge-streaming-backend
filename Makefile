@@ -17,7 +17,7 @@ help:
 	@echo "Override SERVICE_URL=... or DEVICES=... as needed."
 
 DEVICES ?= 50
-HEALTH_TIMEOUT_S ?= 60
+HEALTH_TIMEOUT_S ?= 120
 
 
 up:
