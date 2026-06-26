@@ -6,13 +6,6 @@ import type { AlarmService } from "../alarms/alarm.service.ts";
 import type { DeviceHealthService } from "../health/device-health.service.ts";
 import type { RoomOccupancyService } from "../occupancy/room-occupancy.service.ts";
 
-/**
- * Drains the priority queue on its own continuation chain, yielding to the
- * event loop via setImmediate between items. Processing therefore never
- * sits on the call stack of an HTTP handler: incoming POSTs to /events and
- * reads on other routes (e.g. the alarms feed) get serviced in between
- * worker iterations instead of queuing up behind a synchronous drain loop.
- */
 export class EventWorker {
   private running = false;
 
@@ -36,11 +29,7 @@ export class EventWorker {
     if (!this.running) return;
 
     const event = this.queue.dequeue();
-    // Reported every tick (not just on dequeue) so the gauge reads 0 once
-    // the backlog drains, instead of holding the last nonzero value -
-    // CONTEXT.md's "tamaño de cola" observability requirement, and the
-    // earliest signal that a burst is outpacing processing.
-    queueDepth.set(this.queue.size);
+    //Monitor the priority queue depth for metrics and alerting.
 
     if (event) {
       // Not awaited: process() will become I/O-bound (PG writes) once

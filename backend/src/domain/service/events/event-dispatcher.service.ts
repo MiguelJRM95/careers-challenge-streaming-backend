@@ -22,20 +22,6 @@ function isFallWarnRaw(raw: RawEvent): boolean {
   return typeof raw === "object" && raw !== null && (raw as Record<string, unknown>).type === "fall_warn";
 }
 
-/**
- * Decouples event admission from validation/processing. `dispatch()` is
- * called synchronously from the HTTP handler and only does an O(1) push
- * onto an in-memory buffer of *raw, unvalidated* events — the zod parsing
- * (and everything downstream of it) happens later in `flush()`, which only
- * ever runs from a timer or a `setImmediate` continuation, never on the
- * request's call stack. That's what keeps a burst of POSTs from piling up
- * synchronous validation work on the event loop tick that's also serving
- * other routes (e.g. the alarms feed).
- *
- * `fall_warn` skips the threshold/timer wait by scheduling its flush via
- * `setImmediate` as soon as it's admitted, bounding the alarm feed's
- * ingest-to-persist latency independently of how full the buffer is.
- */
 export class EventDispatcher {
   private buffer: RawEvent[] = [];
   private readonly flushThreshold: number;
@@ -84,11 +70,6 @@ export class EventDispatcher {
     for (const raw of batch) {
       const result = this.validator.validate(raw);
       if (!result.ok) {
-        // warn, not error: a rejected event is expected operational noise
-        // (malformed payload, broken clock) under adversarial input, not a
-        // fault in our own system - logged in full per CONTEXT.md's "no
-        // silent drop" requirement, with the reason counted so rejection
-        // rates are visible on /metrics without grepping logs.
         logger.warn("event discarded", { reason: result.reason, detail: result.detail, event: raw });
         eventsRejectedTotal.inc({ reason: result.reason });
         continue;

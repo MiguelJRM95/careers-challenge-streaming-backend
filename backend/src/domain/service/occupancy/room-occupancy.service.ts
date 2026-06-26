@@ -11,13 +11,7 @@ const WINDOW_MS: Record<OccupancyWindow, number> = {
   "1h": 60 * 60_000,
 };
 
-/**
- * RF-2: per-room occupancy. Presence events are inserted with their own
- * `ts`, and `getOccupancy` recomputes both the current `in_room` state and
- * the windowed occupancy percentage straight from stored rows on every read
- * — a late-arriving presence event needs no special-case fixup, it just
- * lands in the same query the next time this room's occupancy is read.
- */
+
 export class RoomOccupancyService implements RoomOccupancyPort {
   constructor(private readonly repository: RoomOccupancyRepositoryPort) {}
 

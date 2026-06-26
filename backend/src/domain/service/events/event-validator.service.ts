@@ -3,10 +3,6 @@ import type { ValidationResult } from "../../models/validation-result.ts";
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
-/**
- * Pure domain rule: validates the common envelope + per-type payload via the
- * zod schema, then the ts clock-skew bounds. No I/O, no side effects.
- */
 export class EventValidator {
   validate(raw: RawEvent, now: number = Date.now()): ValidationResult {
     const parsed = eventSchema.safeParse(raw);

@@ -31,9 +31,8 @@ const fallWarnEventSchema = z.object({
 });
 const netStatusEventSchema = z.object({ ...envelope, type: z.literal("net_status"), rssi: z.number() });
 
-/**
- * Schema for the common envelope + per-type payload, keyed by discriminated `type`.
- */
+// Simulated and avro schema. This allows us to
+// validate the "message"
 export const eventSchema = z.discriminatedUnion("type", [
   heartbeatEventSchema,
   presenceEventSchema,
@@ -43,9 +42,7 @@ export const eventSchema = z.discriminatedUnion("type", [
   netStatusEventSchema,
 ]);
 
-/**
- * Raw event envelope as received over the wire, before any validation.
- */
+
 export type RawEvent = unknown;
 
 export type EventType = (typeof EVENT_TYPES)[number];

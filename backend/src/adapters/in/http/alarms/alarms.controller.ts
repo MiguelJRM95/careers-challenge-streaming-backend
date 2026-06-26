@@ -3,19 +3,9 @@ import { z } from "zod";
 import type { AlarmsPort } from "../../../../ports/in/alarm-feed.port.ts";
 import { requestDurationMiddleware } from "../core/request-duration.middleware.ts";
 
-// "0" is the scorer's sentinel for "everything since the beginning"; any
-// other value must be an ISO timestamp. Validated here so a malformed
-// `since` fails loudly with a 400 instead of silently becoming an
-// `Invalid Date` that reaches the repository's query.
+// ts validation accepting 0 for start-of-time.
 const sinceSchema = z.literal("0").or(z.iso.datetime({ offset: true })).default("0");
 
-/**
- * HTTP adapter for RF-4: GET /alarms?since=<ts>. `since=0` returns every
- * alarm recorded; any other value is treated as an ISO timestamp lower
- * bound. Always responds with `{ alarms: [...] }`, including on a missing
- * `since` (defaulted to "0") so the scorer's plain GET never has to special
- * case it.
- */
 export function createAlarmsController(alarmsPort: AlarmsPort): Router {
   const router = Router();
 

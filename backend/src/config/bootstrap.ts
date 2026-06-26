@@ -19,13 +19,6 @@ export interface App {
   dispatcher: EventDispatcher;
 }
 
-/**
- * Composition root: wires the in-memory queue, the dispatcher and the
- * worker, then the HTTP adapter on top of the resulting inbound port.
- * Starts the worker here too, since draining the queue isn't tied to the
- * HTTP listener's lifecycle — only starting that listener is left to the
- * caller.
- */
 export function buildApp(): App {
   const queue = new PriorityQueue<ValidatedEvent>();
 

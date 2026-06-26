@@ -3,11 +3,7 @@ interface QueueEntry<T> {
   item: T;
 }
 
-/**
- * Min-priority queue: lower `priority` dequeues first. Stable within the
- * same priority because Array#sort is stable in V8 (Node >= 11), so FIFO
- * order is preserved for events of equal priority.
- */
+//Min-priority queue: lower `priority` dequeues first.
 export class PriorityQueue<T> {
   private items: QueueEntry<T>[] = [];
 

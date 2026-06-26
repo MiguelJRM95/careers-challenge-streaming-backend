@@ -6,11 +6,6 @@ import { resourceNotFoundTotal } from "../../../../config/metrics.ts";
 
 const windowSchema = z.enum(OCCUPANCY_WINDOWS);
 
-/**
- * HTTP adapter for RF-2: GET /rooms/{room_id}/occupancy?window=1m|5m|1h.
- * 404s when the room has never received a presence event, since there is
- * nothing to report yet.
- */
 export function createRoomOccupancyController(roomOccupancyPort: RoomOccupancyPort): Router {
   const router = Router();
 
@@ -23,8 +18,6 @@ export function createRoomOccupancyController(roomOccupancyPort: RoomOccupancyPo
 
     const occupancy = await roomOccupancyPort.getOccupancy(req.params.room_id, parsed.data);
     if (!occupancy) {
-      // Counted (not just logged) so a spike in unknown-room lookups shows
-      // up as an alertable rate alongside the device-health equivalent.
       resourceNotFoundTotal.inc({ resource: "room" });
       res.status(404).json({ error: "room_not_found" });
       return;

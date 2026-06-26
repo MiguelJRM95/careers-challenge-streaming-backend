@@ -55,10 +55,7 @@ export const resourceNotFoundTotal = new Counter({
   registers: [registry],
 });
 
-// README target: alarm feed emits within 1s of ingest at p95. With the
-// event_generator standing in for a Kafka producer, "ingest" and "feed"
-// are just two HTTP endpoints, so plain request-duration buckets per
-// route give us p50/p95/p99 for both POST /events and GET /alarms.
+// Metric to calculate latency p50/p95/p99 GET /alarms.
 export const httpRequestDurationSeconds = new Histogram({
   name: "http_request_duration_seconds",
   help: "HTTP request duration in seconds, by route/method/status",
